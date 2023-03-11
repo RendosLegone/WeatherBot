@@ -76,7 +76,10 @@ async def mainMenu(callback: CallbackQuery, state: FSMContext):
 
 
 async def editLocation(msg: Message, state: FSMContext):
-    pass
+    subscribersDB.updateUser(msg.from_user.id, location=msg.text)
+    await msg.reply("Ваш адрес изменён!")
+    await state.clear()
+
 
 async def editTime(msg: Message, state: FSMContext):
     oldTime = subscribersDB.getUser(msg.from_user.id).notifyTime

@@ -12,12 +12,16 @@ unsubscribeButton = InlineKeyboardButton(
     callback_data="unsubscribe"
 )
 editNotifyTime = InlineKeyboardButton(
-    text="Изменить время ежедневного прогноза",
+    text="Изменить время",
     callback_data="editTime"
 )
 getWeather = InlineKeyboardButton(
     text="Прогноз на завтра",
     callback_data="getWeather"
+)
+editLocation = InlineKeyboardButton(
+    text="Изменить адрес",
+    callback_data="editLocation"
 )
 
 
@@ -28,4 +32,5 @@ def genMainKeyboard(newUser=True):
         mainKeyboard.add(unsubscribeButton)
         mainKeyboard.add(editNotifyTime)
         mainKeyboard.add(getWeather)
+        mainKeyboard.add(editLocation)
     return mainKeyboard

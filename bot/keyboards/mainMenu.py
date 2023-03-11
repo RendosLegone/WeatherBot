@@ -23,6 +23,10 @@ editLocation = InlineKeyboardButton(
     text="Изменить адрес",
     callback_data="editLocation"
 )
+buySubscription = InlineKeyboardButton(
+    text="Оформить подписку",
+    callback_data="buySubscription"
+)
 
 
 def genMainKeyboard(newUser=True):
@@ -33,4 +37,5 @@ def genMainKeyboard(newUser=True):
         mainKeyboard.add(editNotifyTime)
         mainKeyboard.add(getWeather)
         mainKeyboard.add(editLocation)
+        mainKeyboard.add(buySubscription)
     return mainKeyboard

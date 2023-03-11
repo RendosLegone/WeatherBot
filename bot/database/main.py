@@ -2,7 +2,7 @@ import sqlite3
 from dataclasses import dataclass
 from .validators import dbFile
 
-file = "C:/Users/B-ZONE/Desktop/Программирование/Python/Bot-Site Project/bot/database/data.db"
+file = "F:/Программирование/Python проекты/Bot-Site Project/bot/database/data.db"
 
 
 @dataclass

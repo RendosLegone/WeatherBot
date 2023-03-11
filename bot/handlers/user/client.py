@@ -1,6 +1,6 @@
 import datetime
-
-from aiogram.types import Message, CallbackQuery
+from aiogram import types
+from aiogram.types import Message, CallbackQuery, LabeledPrice
 from aiogram.fsm.context import FSMContext
 from bot.states import ClientStates
 from bot.misc.util import getLoc
@@ -9,6 +9,26 @@ from bot.misc.weather import getCertainWeather
 from bot.database import schedulerDB, subscribersDB
 from bot.Scheduler import scheduler
 from bot.keyboards import genMainKeyboard
+from configparser import ConfigParser
+config = ConfigParser()
+config.read("F:/Программирование/Python проекты/Bot-Site Project/bot/handlers/user/config.ini",
+            encoding="UTF-8")
+print(config["ONE_MONTH_SUBSCRIBE_DETAILS"])
+configDetails = {}
+configPrice = {}
+for key in config["ONE_MONTH_SUBSCRIBE_DETAILS"]:
+    value = config["ONE_MONTH_SUBSCRIBE_DETAILS"][key]
+    if "width" in key or "height" in key or "size" in key:
+        value = int(value)
+    if "flex" in key:
+        value = bool(value)
+    configDetails[key] = value
+for key in config["ONE_MONTH_SUBSCRIBE_PRICE"]:
+    value = config["ONE_MONTH_SUBSCRIBE_PRICE"][key]
+    if key == "amount":
+        value = int(value)
+    configPrice[key] = value
+print(configDetails)
 
 
 async def menuHandler(msg: Message):
@@ -73,6 +93,8 @@ async def mainMenu(callback: CallbackQuery, state: FSMContext):
             chat_id=callback.from_user.id,
             text=getCertainWeather(locationUser, date=[dateNow.day + 1, dateNow.month])
         )
+    if callback.data == "buySubscription":
+        await bot.send_invoice(chat_id=callback.from_user.id, prices=[LabeledPrice(**configPrice)], **configDetails)
 
 
 async def editLocation(msg: Message, state: FSMContext):
@@ -91,3 +113,20 @@ async def editTime(msg: Message, state: FSMContext):
         schedulerDB.increaseCount(msg.text)
     await msg.reply("Время рассылки успешно изменено!")
     await state.clear()
+
+
+async def pre_checkout_query(pre_checkout_q: types.PreCheckoutQuery):
+    print("dwwadw")
+    await bot.answer_pre_checkout_query(pre_checkout_q.id, ok=True)
+    print("dwadwawd")
+
+
+async def successful_payment(message: types.Message):
+    print("SUCCESSFUL PAYMENT:")
+    payment_info = message.successful_payment
+    for k, v in payment_info:
+        print(f"{k} = {v}")
+
+    await bot.send_message(message.chat.id,
+                           f"Платеж на сумму {message.successful_payment.total_amount // 100} "
+                           f"{message.successful_payment.currency} прошел успешно!!!")

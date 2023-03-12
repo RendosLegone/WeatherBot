@@ -1,13 +1,15 @@
-from aiogram import Dispatcher
+from aiogram import Dispatcher, Bot
 from aiogram.fsm.storage.memory import MemoryStorage
 from bot.handlers.main import clientRouter, adminRouter, otherRouter, reg_all_handlers
 import asyncio
-from bot.misc.fconnect import bot
 from bot.Scheduler import scheduler
+from bot.misc.env import TgKeys
+
+bot = Bot(token=TgKeys.TOKEN)
 
 
 async def on_startup():
-    asyncio.create_task(scheduler.scheduler())
+    asyncio.create_task(scheduler.scheduler(bot))
 
 
 async def run_bot():

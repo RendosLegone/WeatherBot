@@ -1,7 +1,6 @@
 import sqlite3
 from dataclasses import dataclass
 from .validators import dbFile
-
 file = "F:/Программирование/Python проекты/Bot-Site Project/bot/database/data.db"
 
 
@@ -19,7 +18,7 @@ class dbScheduler:
 
     def __init__(self, db_file):
         self.__db_file = db_file
-        self.connect = sqlite3.connect(self.__db_file)
+        self.connect = sqlite3.connect(self.__db_file, isolation_level=None)
         self.cursor = self.connect.cursor()
 
     def timeExist(self, time):
@@ -33,7 +32,7 @@ class dbScheduler:
         return self.connect.commit()
 
     def decreaseCount(self, time):
-        count = self.cursor.execute(f"SELECT count FROM scheduler WHERE time = ?", (time,)).fetchone()
+        count = self.cursor.execute(f"SELECT count FROM scheduler WHERE time = ?", (str(time),)).fetchone()
         if count[0] == 1:
             return self.cursor.execute(f"DELETE FROM scheduler WHERE time = ?", (time,))
         self.cursor.execute(f"UPDATE scheduler SET count = {count[0] - 1} WHERE time = ?", (time,))
@@ -72,10 +71,10 @@ class dbSubscribers:
         self.connect.commit()
 
     def delUser(self, user_id):
-        self.cursor.execute(f"DELETE * FROM subscribers WHERE user_id = {user_id}")
-        time = self.cursor.execute(f"SELECT notifyTime FROM subscribers WHERE user_id = {user_id}")
-        self.connect.commit()
+        time = self.cursor.execute(f"SELECT notifyTime FROM subscribers WHERE user_id = ?", (user_id,)).fetchone()[0]
         schedulerDB.decreaseCount(time)
+        self.cursor.execute(f"DELETE FROM subscribers WHERE user_id = ?", (user_id,))
+        self.connect.commit()
 
     def updateUser(self, user_id, **kwargs):
         for kwarg in kwargs:

@@ -2,25 +2,24 @@ import asyncio
 import datetime
 
 import aioschedule
-from bot.misc.fconnect import bot
 from bot.misc.weather import getWeather, getCertainWeather
 from bot.database import schedulerDB, subscribersDB
 
 
 class Scheduler:
-    async def scheduler(self):
+    async def scheduler(self, bot):
         timeData = schedulerDB.getAllTime()
         for time in timeData:
-            aioschedule.every(1).day.at(time[0]).do(self.sendWeather, time=time)
+            aioschedule.every(1).day.at(time[0]).do(self.sendWeather, time=time, bot=bot)
         while True:
             await aioschedule.run_pending()
             await asyncio.sleep(1)
 
-    async def addTime(self, time):
-        aioschedule.every(1).day.at(time).do(self.sendWeather, time=[time])
+    async def addTime(self, time, bot):
+        aioschedule.every(1).day.at(time).do(self.sendWeather, time=[time], bot=bot)
 
     @staticmethod
-    async def sendWeather(time):
+    async def sendWeather(time, bot):
         dayNow = int(datetime.date.today().strftime("%d"))
         monthNow = int(datetime.date.today().strftime("%m"))
         yearNow = int(datetime.date.today().strftime("%Y"))

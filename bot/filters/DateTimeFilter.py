@@ -1,4 +1,3 @@
-from datetime import timedelta
 from typing import Dict, Any
 from aiogram.filters import BaseFilter, CommandObject
 from aiogram.types import Message
@@ -15,18 +14,15 @@ class HasTimeFilter(BaseFilter):
     def __init__(self):
         super().__init__()
 
-    async def __call__(self, message: Message, command: CommandObject) -> bool | Dict[str, Any]:
+    async def __call__(self, msg: Message) -> str | Dict[str, Any]:
         timeData = None
         timeFormat = {"morning": "утра", "day": "дня", "evening": "вечера", "night": "ночи"}
-        if command.args[0].find(":") != -1:
-            time = command.args[0].split(":")
-            hours = int(time[0])
-            minutes = int(time[1])
-            timeData = timedelta(hours=hours, minutes=minutes)
+        if msg.text.find(":") != -1:
+            return {"time": msg.text}
         else:
-            time = command.args[0]
+            time = msg.text
             for i in timeFormat:
                 if timeFormat[i] in time:
                     if timeFormat[i] == "дня" or timeFormat[i] == "вечера":
-                        timeData = timedelta(hours=int(time.split(f"{timeFormat[i]}")[0]) + 12)
+                        timeData = f"{int(time.split(f'{timeFormat[i]}')[0]) + 12}:00"
         return {"time": timeData}

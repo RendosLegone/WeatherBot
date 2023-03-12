@@ -1,3 +1,4 @@
 from .DateTimeFilter import HasTimeFilter
 from .UsernameFIlter import HasUsernamesFilter
 from .SuccessfulPaymentFilter import SuccessfulPaymentFilter
+from .PreCheckoutQueryFilter import PreCheckoutQueryFilter

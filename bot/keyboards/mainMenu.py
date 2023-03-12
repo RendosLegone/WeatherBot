@@ -1,8 +1,6 @@
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.types import InlineKeyboardButton
 
-
-mainKeyboard = InlineKeyboardBuilder()
 subscribeButton = InlineKeyboardButton(
     text="Подписаться на прогноз погоды",
     callback_data="subscribe"
@@ -21,7 +19,8 @@ getWeather = InlineKeyboardButton(
 )
 editLocation = InlineKeyboardButton(
     text="Изменить адрес",
-    callback_data="editLocation"
+    callback_data="editLocation",
+    request_location=True
 )
 buySubscription = InlineKeyboardButton(
     text="Оформить подписку",
@@ -29,13 +28,10 @@ buySubscription = InlineKeyboardButton(
 )
 
 
-def genMainKeyboard(newUser=True):
-    if newUser:
-        mainKeyboard.add(subscribeButton)
-    else:
-        mainKeyboard.add(unsubscribeButton)
-        mainKeyboard.add(editNotifyTime)
-        mainKeyboard.add(getWeather)
-        mainKeyboard.add(editLocation)
-        mainKeyboard.add(buySubscription)
-    return mainKeyboard
+def genMainKeyboard(new_user, paid_subscription):
+    if new_user:
+        return InlineKeyboardBuilder().add(subscribeButton)
+    listButtons = [unsubscribeButton, editLocation, editNotifyTime, getWeather]
+    if paid_subscription == 0:
+        listButtons.append(buySubscription)
+    return InlineKeyboardBuilder().row(*listButtons, width=1)

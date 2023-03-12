@@ -11,6 +11,7 @@ class UserDB:
     location: str
     username: int
     notifyTime: str
+    paid_subscription: str
 
 
 class dbScheduler:
@@ -62,11 +63,12 @@ class dbSubscribers:
         self.connect = sqlite3.connect(self.__db_file)
         self.cursor = self.connect.cursor()
 
-    def addUser(self, user_id, location, username, notifyTime):
+    def addUser(self, user_id, location, username, notifyTime, paid_subscription):
         if not schedulerDB.timeExist(notifyTime):
             schedulerDB.addTime(notifyTime)
         schedulerDB.increaseCount(notifyTime)
-        self.cursor.execute(f"INSERT INTO subscribers VALUES(?, ?, ?, ?)", (user_id, location, username, notifyTime,))
+        self.cursor.execute(f"INSERT INTO subscribers VALUES(?, ?, ?, ?, ?)", (user_id, location, username, notifyTime,
+                                                                               paid_subscription,))
         self.connect.commit()
 
     def delUser(self, user_id):
@@ -83,8 +85,10 @@ class dbSubscribers:
 
     def getUser(self, user_id):
         userData = self.cursor.execute(f"SELECT * FROM subscribers WHERE user_id = ?", (user_id,)).fetchone()
-        return UserDB(*userData)
-    
+        if userData:
+            return UserDB(*userData)
+        return False
+
     def getTimeUsers(self, time):
         users = self.cursor.execute(f"SELECT * FROM subscribers WHERE notifyTime = ?", (time,))
         usersReturn = []

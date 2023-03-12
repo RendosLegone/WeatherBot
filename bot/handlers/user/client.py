@@ -15,8 +15,13 @@ from bot.misc.config import configPrice, configDetails
 async def menuHandler(msg: Message):
     subscriber = subscribersDB.getUser(msg.from_user.id)
     if subscriber is False:
-        newUser = True
-        paid_subscription = 0
+        oldSubscriber = subscribersDB.getOldUser(msg.from_user.id)
+        if oldSubscriber:
+            newUser = "old"
+            paid_subscription = oldSubscriber[1]
+        else:
+            newUser = True
+            paid_subscription = 0
     else:
         newUser = False
         paid_subscription = subscriber.paid_subscription
@@ -40,14 +45,17 @@ async def subscribeStep2(msg: Message, state: FSMContext):
 async def subscribeStep3(msg: Message, state: FSMContext, bot: Bot, time: str):
     data = await state.get_data()
     location = data["location"]
-    subscribersDB.addUser(msg.from_user.id, location, msg.from_user.username, time, 0)
+    oldUser = subscribersDB.getOldUser(msg.from_user.id)
+    subscribersDB.addUser(msg.from_user.id, location, msg.from_user.username, time, oldUser[1] if oldUser else 0)
     await scheduler.addTime(time, bot)
     await msg.reply(f"""Вы подписались на ежедневный прогноз погоды!
     Адрес: {location}
     Расписание: Каждый день в {time}
-    Платная подписка: Нет""")
+    Платная подписка: от {oldUser[1] if oldUser else 'Нет'}""")
+    if oldUser:
+        return await state.clear()
     await msg.reply(f"Оформить платную подписку на детальный прогноз можно в /menu ;)")
-    await state.clear()
+    return await state.clear()
 
 
 async def mainMenu(callback: CallbackQuery, state: FSMContext, bot: Bot):
@@ -85,10 +93,20 @@ async def mainMenu(callback: CallbackQuery, state: FSMContext, bot: Bot):
         )
     if callback.data == "buySubscription":
         await bot.send_invoice(chat_id=callback.from_user.id, prices=[LabeledPrice(**configPrice)], **configDetails)
+    if callback.data == "resubscribe":
+        await bot.send_message(
+            chat_id=callback.from_user.id,
+            text="Укажите ваш населённый пункт(полное название или гео-метка)"
+        )
+        await state.set_state(ClientStates.setLoc)
 
 
 async def editLocation(msg: Message, state: FSMContext):
-    subscribersDB.updateUser(msg.from_user.id, location=msg.text)
+    if msg.location:
+        location = getLoc(msg.location.latitude, msg.location.longitude)
+    else:
+        location = msg.text
+    subscribersDB.updateUser(msg.from_user.id, location=location)
     await msg.reply("Ваш адрес изменён!")
     await state.clear()
 

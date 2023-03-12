@@ -59,7 +59,7 @@ class dbSubscribers:
 
     def __init__(self, db_file):
         self.__db_file = db_file
-        self.connect = sqlite3.connect(self.__db_file)
+        self.connect = sqlite3.connect(self.__db_file, isolation_level=None)
         self.cursor = self.connect.cursor()
 
     def addUser(self, user_id, location, username, notifyTime, paid_subscription):
@@ -71,10 +71,19 @@ class dbSubscribers:
         self.connect.commit()
 
     def delUser(self, user_id):
+        paidSubscription = self.cursor.execute(f"SELECT paid_subscription FROM subscribers WHERE user_id = ?", (user_id,)).fetchone()
+        if paidSubscription[0] != "0":
+            self.cursor.execute(f"INSERT INTO old_subscribers VALUES(?, ?)", (user_id, paidSubscription[0],))
         time = self.cursor.execute(f"SELECT notifyTime FROM subscribers WHERE user_id = ?", (user_id,)).fetchone()[0]
         schedulerDB.decreaseCount(time)
         self.cursor.execute(f"DELETE FROM subscribers WHERE user_id = ?", (user_id,))
         self.connect.commit()
+
+    def getOldUser(self, user_id):
+        oldUser = self.cursor.execute(f"SELECT * FROM old_subscribers WHERE user_id = ?", (user_id,)).fetchone()
+        if oldUser:
+            return oldUser
+        return False
 
     def updateUser(self, user_id, **kwargs):
         for kwarg in kwargs:

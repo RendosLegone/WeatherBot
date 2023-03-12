@@ -26,10 +26,17 @@ buySubscription = InlineKeyboardButton(
     text="Оформить подписку",
     callback_data="buySubscription"
 )
+resubscribe = InlineKeyboardButton(
+    text="Вернуть подписку\n({0})",
+    callback_data="resubscribe"
+)
 
 
 def genMainKeyboard(new_user, paid_subscription):
-    if new_user:
+    if new_user == "old":
+        resubscribe.text = resubscribe.text.format(paid_subscription)
+        return InlineKeyboardBuilder().add(resubscribe)
+    if new_user is True:
         return InlineKeyboardBuilder().add(subscribeButton)
     listButtons = [unsubscribeButton, editLocation, editNotifyTime, getWeather]
     if paid_subscription == 0:

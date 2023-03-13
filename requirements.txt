@@ -8,3 +8,5 @@ DateTime~=4.5
 aioschedule~=0.5.2
 asyncio~=3.4.3
 fake_useragent
+PyYAML~=6.0
+python-dotenv~=1.0.0

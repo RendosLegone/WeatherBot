@@ -1,23 +1,13 @@
-from configparser import ConfigParser
+import yaml
+from yaml import load
 
-config = ConfigParser()
-config.read("F:/Программирование/Python проекты/Bot-Site Project/bot/handlers/user/config.ini",
-            encoding="UTF-8")
-print(config["ONE_MONTH_SUBSCRIBE_DETAILS"])
+with open("C:/Users/B-ZONE/Desktop/Программирование/Python/Bot-Site Project/bot/config.yaml", encoding="UTF-8") as f:
+    config = load(f, yaml.FullLoader)
 configDetails = {}
 configPrice = {}
 for key in config["ONE_MONTH_SUBSCRIBE_DETAILS"]:
     value = config["ONE_MONTH_SUBSCRIBE_DETAILS"][key]
-    if "width" in key or "height" in key or "size" in key:
-        value = int(value)
-    if value == "False":
-        value = False
-    if value == "True":
-        value = True
     configDetails[key] = value
 for key in config["ONE_MONTH_SUBSCRIBE_PRICE"]:
     value = config["ONE_MONTH_SUBSCRIBE_PRICE"][key]
-    if key == "amount":
-        value = int(value)
     configPrice[key] = value
-

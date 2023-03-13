@@ -1,4 +1,4 @@
-from aiogram.filters import BaseFilter, Filter
+from aiogram.filters import Filter
 from aiogram.types import PreCheckoutQuery
 
 

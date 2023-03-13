@@ -1,7 +1,7 @@
 import sqlite3
 from dataclasses import dataclass
 from .validators import dbFile
-file = "F:/Программирование/Python проекты/Bot-Site Project/bot/database/data.db"
+file = "C:/Users/B-ZONE/Desktop/Программирование/Python/Bot-Site Project/bot/database/data.db"
 
 
 @dataclass
@@ -11,6 +11,14 @@ class UserDB:
     username: int
     notifyTime: str
     paid_subscription: str
+
+    @property
+    def delUser(self):
+        return subscribersDB.delUser(self.user_id)
+
+    @property
+    def updateUser(self, **kwargs):
+        return subscribersDB.updateUser(self.user_id, **kwargs)
 
 
 class dbScheduler:
@@ -77,6 +85,10 @@ class dbSubscribers:
         time = self.cursor.execute(f"SELECT notifyTime FROM subscribers WHERE user_id = ?", (user_id,)).fetchone()[0]
         schedulerDB.decreaseCount(time)
         self.cursor.execute(f"DELETE FROM subscribers WHERE user_id = ?", (user_id,))
+        self.connect.commit()
+
+    def delOldUser(self, user_id):
+        self.cursor.execute(f"DELETE FROM old_subscribers WHERE user_id = {user_id}")
         self.connect.commit()
 
     def getOldUser(self, user_id):

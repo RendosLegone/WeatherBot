@@ -7,7 +7,7 @@ class SubscriberFilter(Filter):
     def __init__(self):
         super().__init__()
 
-    async def __call__(self, msg: Message) -> dict[str, UserDB | list | False]:
+    async def __call__(self, msg: Message) -> dict[str, UserDB] | dict[str, list] | dict[str, bool]:
         if not subscribersDB.getUser(msg.from_user.id):
             if not subscribersDB.getOldUser(msg.from_user.id):
                 return {"subscriber": False}

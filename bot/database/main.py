@@ -1,6 +1,7 @@
 import sqlite3
 from dataclasses import dataclass
 from .validators import dbFile
+
 file = "C:/Users/B-ZONE/Desktop/Программирование/Python/Bot-Site Project/bot/database/data.db"
 
 
@@ -11,12 +12,11 @@ class UserDB:
     username: int
     notifyTime: str
     paid_subscription: str
+    discount: int
 
-    @property
     def delUser(self):
         return subscribersDB.delUser(self.user_id)
 
-    @property
     def updateUser(self, **kwargs):
         return subscribersDB.updateUser(self.user_id, **kwargs)
 
@@ -70,16 +70,18 @@ class dbSubscribers:
         self.connect = sqlite3.connect(self.__db_file, isolation_level=None)
         self.cursor = self.connect.cursor()
 
-    def addUser(self, user_id, location, username, notifyTime, paid_subscription):
+    def addUser(self, user_id, location, username, notifyTime, paid_subscription, discount):
         if not schedulerDB.timeExist(notifyTime):
             schedulerDB.addTime(notifyTime)
         schedulerDB.increaseCount(notifyTime)
-        self.cursor.execute(f"INSERT INTO subscribers VALUES(?, ?, ?, ?, ?)", (user_id, location, username, notifyTime,
-                                                                               paid_subscription,))
+        self.cursor.execute(f"INSERT INTO subscribers VALUES(?, ?, ?, ?, ?, ?)",
+                            (user_id, location, username, notifyTime,
+                             paid_subscription, discount))
         self.connect.commit()
 
     def delUser(self, user_id):
-        paidSubscription = self.cursor.execute(f"SELECT paid_subscription FROM subscribers WHERE user_id = ?", (user_id,)).fetchone()
+        paidSubscription = self.cursor.execute(f"SELECT paid_subscription FROM subscribers WHERE user_id = ?",
+                                               (user_id,)).fetchone()
         if paidSubscription[0] != "0":
             self.cursor.execute(f"INSERT INTO old_subscribers VALUES(?, ?)", (user_id, paidSubscription[0],))
         time = self.cursor.execute(f"SELECT notifyTime FROM subscribers WHERE user_id = ?", (user_id,)).fetchone()[0]

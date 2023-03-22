@@ -13,3 +13,6 @@ ONE_MONTH_SUBSCRIBE_DETAILS:
 ONE_MONTH_SUBSCRIBE_PRICE:
   amount: !!int 12000
   label: !!str Детальный прогноз на 1 месяц
+DISCOUNTS:
+  global: !!int 0
+  inviting: !!int 15

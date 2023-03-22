@@ -30,6 +30,10 @@ resubscribe = InlineKeyboardButton(
     text="Вернуть подписку\n({0})",
     callback_data="resubscribe"
 )
+getDiscount = InlineKeyboardButton(
+    text="Получить скидку",
+    callback_data="getDiscount"
+)
 
 
 def genMainKeyboard(new_user, paid_subscription):
@@ -38,7 +42,15 @@ def genMainKeyboard(new_user, paid_subscription):
         return InlineKeyboardBuilder().add(resubscribe)
     if new_user is True:
         return InlineKeyboardBuilder().add(subscribeButton)
-    listButtons = [unsubscribeButton, editLocation, editNotifyTime, getWeather]
+    listButtons = [unsubscribeButton, editLocation, editNotifyTime, getWeather, getDiscount]
     if paid_subscription == 0:
         listButtons.append(buySubscription)
     return InlineKeyboardBuilder().row(*listButtons, width=1)
+
+
+def genDiscountButton(user_id):
+    discountButton = InlineKeyboardButton(
+        text="Подписаться на прогноз погоды",
+        callback_data=f"subscribe_{user_id}"
+    )
+    return InlineKeyboardBuilder().add(discountButton)

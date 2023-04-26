@@ -1,7 +1,7 @@
 import yaml
 from yaml import load
 
-with open("C:/Users/B-ZONE/Desktop/Программирование/Python/Bot-Site Project/bot/config.yaml", encoding="UTF-8") as f:
+with open("/home/maxim/PycharmProjects/WeatherBot/bot/config.yaml", encoding="UTF-8") as f:
     config = load(f, yaml.FullLoader)
 configDetails = {}
 configPrice = {}

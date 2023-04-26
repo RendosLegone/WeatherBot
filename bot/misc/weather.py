@@ -16,7 +16,7 @@ def getWeather(loc, days=1):
         if days == 1:
             weatherDescription = weatherDescription.split("Завтра")[0]
         if days == -1:
-            weatherDescription = weatherDescription.split("%. ")[1]
+            weatherDescription = weatherDescription.split("%")[1]
         return weatherDescription
     else:
         dayWeek = soup.find_all("div", attrs={"class": "day-week"})

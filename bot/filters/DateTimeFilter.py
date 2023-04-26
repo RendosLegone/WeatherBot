@@ -23,6 +23,12 @@ class HasTimeFilter(BaseFilter):
             time = msg.text
             for i in timeFormat:
                 if timeFormat[i] in time:
+                    if time.split(f'{timeFormat[i]}')[0] == "час " or time.split(f'{timeFormat[i]}')[0] == "в час ":
+                        time_first_part = 1
+                    else:
+                        time_first_part = int(time.split(f'{timeFormat[i]}')[0])
                     if timeFormat[i] == "дня" or timeFormat[i] == "вечера":
-                        timeData = f"{int(time.split(f'{timeFormat[i]}')[0]) + 12}:00"
+                        timeData = f"{time_first_part + 12}:00"
+                    else:
+                        timeData = f"0{time_first_part}:00"
         return {"time": timeData}

@@ -43,7 +43,7 @@ def genMainKeyboard(new_user, paid_subscription):
     if new_user is True:
         return InlineKeyboardBuilder().add(subscribeButton)
     listButtons = [unsubscribeButton, editLocation, editNotifyTime, getWeather, getDiscount]
-    if paid_subscription == 0:
+    if not paid_subscription:
         listButtons.append(buySubscription)
     return InlineKeyboardBuilder().row(*listButtons, width=1)
 

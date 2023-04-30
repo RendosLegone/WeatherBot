@@ -6,3 +6,4 @@ class ClientStates(StatesGroup):
     setTimer = State()
     editTimer = State()
     editLocation = State()
+    usePromo = State()

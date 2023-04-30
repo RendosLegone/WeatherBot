@@ -7,13 +7,9 @@ from bot.misc.config import configDetails
 from bot.states import ClientStates
 from bot.misc.util import getLoc
 from bot.misc.weather import getCertainWeather, getWeather
-from bot.database import dbScheduler, dbSubscribers, UserDB, dbDiscounts, dbOldSubscribers, PaidSubscriptionDB, \
-    dbSubscriptions, dbReceipts
+from bot.database import dbScheduler, dbSubscribers, UserDB, dbDiscounts, dbOldSubscribers, dbSubscriptions, dbReceipts
 from bot.Scheduler import scheduler
 from bot.keyboards import genMainKeyboard, genSubscriptionsKeyboard
-
-
-# from bot.misc.config import configPrice, configDetails
 
 
 async def menuHandler(msg: Message, subscriber: UserDB | list | bool):
@@ -71,15 +67,6 @@ async def mainMenu(callback: CallbackQuery, state: FSMContext, bot: Bot, subscri
     if callback.data == "buySubscription":
         await bot.send_message(chat_id=callback.from_user.id, text="Подписки:",
                                reply_markup=genSubscriptionsKeyboard().as_markup())
-        # prices = [LabeledPrice(**configPrice)]
-        # if subscriber.discounts:
-        #     for discount_name in subscriber.discounts:
-        #         discount = dbDiscounts.getDiscount(name=discount_name)
-        #         amount = discount.amount
-        #         label = discount.label
-        #         prices.append(LabeledPrice(amount=(-configPrice["amount"] / 100 * amount),
-        #                                    label=f"Скидка {amount} {label}%"))
-        # await bot.send_invoice(chat_id=user_id, prices=prices, **configDetails)
     if callback.data == "resubscribe":
         await bot.send_message(
             chat_id=user_id,
@@ -91,6 +78,28 @@ async def mainMenu(callback: CallbackQuery, state: FSMContext, bot: Bot, subscri
         await bot.send_message(user_id, f"Для того чтобы получить скидку нужно пригласить друга,"
                                         f"просто отправьте ему эту ссылку:\n"
                                         f"{link}")
+    if callback.data == "usePromo":
+        await bot.send_message(user_id, f"Отправьте промокод")
+        return await state.set_state(ClientStates.usePromo)
+
+
+async def usePromo(msg: Message, subscriber: UserDB | list | bool):
+    promo = msg.text
+    discounts = dbDiscounts.getDiscounts()
+    for discount in discounts:
+        if discount.trigger:
+            if "promo" in discount.trigger:
+                if discount.trigger["promo"] == promo:
+                    if discount.limit_count:
+                        if discount.limit_count == 0:
+                            discount.deleteDiscount()
+                            return await msg.reply(f'Промокод "{discount.label}" недействителен!')
+                    if discount.name in subscriber.discounts:
+                        return await msg.reply("Вы уже использовали этот промокод!")
+                    dbSubscribers.giveDiscount(subscriber.user_id, discount.name)
+                    discount.decreaseLimit()
+                    return await msg.reply(f'Вам выдана скидка "{discount.label}" в размере {discount.amount}%')
+    return await msg.reply(f"Такого промокода не существует!")
 
 
 async def subscribeStep1(msg: Message, state: FSMContext):

@@ -61,7 +61,7 @@ class Database:
         return self.connect.commit()
 
     def _delete_records(self, **kwargs):
-        conditions = ", ".join([f'"{kwarg} = %s"' for kwarg in kwargs])
+        conditions = ", ".join([f'"{kwarg}" = %s' for kwarg in kwargs])
         list_values = [kwargs[kwarg] for kwarg in kwargs]
         self.cursor.execute(f"DELETE FROM {self.table} WHERE {conditions}", list_values)
         return self.connect.commit()
@@ -152,7 +152,7 @@ class SchedulerDatabase(Database):
         return self._update_records(search_key="time", search_value=notify_time, count=count)
 
     def decreaseCount(self, notify_time):
-        count = self._get_records(1, time=notify_time)[1] - 1
+        count = self._get_records(1, time=notify_time)[0][1] - 1
         if count == 0:
             return self._delete_records(time=notify_time)
         return self._update_records(search_key="time", search_value=notify_time, count=count)
@@ -246,7 +246,7 @@ class PurchaseReceiptsDatabase(Database):
                                    order_info=order_info)
 
     def getReceipt(self, **kwargs):
-        return ReceiptDB(*self._get_records(1, **kwargs))
+        return ReceiptDB(*self._get_records(1, **kwargs)[0])
 
 
 dbSubscribers = SubscribersDatabase()
@@ -326,6 +326,6 @@ class ReceiptDB:
     telegram_purchase_id: str
     provider_purchase_id: str
     user_id: int
-    date_time: datetime
     shipping_option_id: str
     order_info: dict
+    date_time: datetime

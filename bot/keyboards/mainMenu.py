@@ -34,6 +34,10 @@ getDiscount = InlineKeyboardButton(
     text="Получить скидку",
     callback_data="getDiscount"
 )
+usePromo = InlineKeyboardButton(
+    text="Использовать промокод",
+    callback_data="usePromo"
+)
 
 
 def genMainKeyboard(new_user, paid_subscription):
@@ -42,7 +46,7 @@ def genMainKeyboard(new_user, paid_subscription):
         return InlineKeyboardBuilder().add(resubscribe)
     if new_user is True:
         return InlineKeyboardBuilder().add(subscribeButton)
-    listButtons = [unsubscribeButton, editLocation, editNotifyTime, getWeather, getDiscount]
+    listButtons = [unsubscribeButton, editLocation, editNotifyTime, getWeather, getDiscount, usePromo]
     if not paid_subscription:
         listButtons.append(buySubscription)
     return InlineKeyboardBuilder().row(*listButtons, width=1)

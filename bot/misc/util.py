@@ -8,7 +8,6 @@ geolocator = Nominatim(user_agent="tgBotWeather")
 async def get_user(username):
     async with TelegramClient("@rendoslegon", 2219729, "62f05ba3a682509353343b6e2fbd8802") as client:
         user = await client(functions.users.GetFullUserRequest(username))
-        print(user)
         return user.user
 
 

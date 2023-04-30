@@ -2,30 +2,36 @@ import datetime
 from aiogram import types, Bot
 from aiogram.types import Message, CallbackQuery, LabeledPrice
 from aiogram.fsm.context import FSMContext
-from aiogram.utils.deep_linking import create_start_link, decode_payload
+from aiogram.utils.deep_linking import create_start_link
+from bot.misc.config import configDetails
 from bot.states import ClientStates
 from bot.misc.util import getLoc
 from bot.misc.weather import getCertainWeather, getWeather
-from bot.database import dbScheduler, dbSubscribers, UserDB, dbDiscounts, dbOldSubscribers
+from bot.database import dbScheduler, dbSubscribers, UserDB, dbDiscounts, dbOldSubscribers, PaidSubscriptionDB, \
+    dbSubscriptions, dbReceipts
 from bot.Scheduler import scheduler
-from bot.keyboards import genMainKeyboard
-from bot.misc.config import configPrice, configDetails
+from bot.keyboards import genMainKeyboard, genSubscriptionsKeyboard
+
+
+# from bot.misc.config import configPrice, configDetails
 
 
 async def menuHandler(msg: Message, subscriber: UserDB | list | bool):
     if not subscriber:
-        newUser = True
+        new_user = True
         paid_subscription = 0
     elif isinstance(subscriber, list):
-        newUser = "old"
+        new_user = "old"
         paid_subscription = subscriber[1]
     else:
-        newUser = False
-        paid_subscription = subscriber.paid_subscription
-    await msg.reply("Меню:", reply_markup=genMainKeyboard(newUser, paid_subscription).as_markup())
+        new_user = False
+        paid_subscription = subscriber.paid_subscription_id
+    await msg.reply("Меню:", reply_markup=genMainKeyboard(new_user, paid_subscription).as_markup())
 
 
 async def mainMenu(callback: CallbackQuery, state: FSMContext, bot: Bot, subscriber: UserDB | tuple | bool):
+    if callback.data.split("_")[0] == "pay":
+        return await subscriptions(bot, callback, subscriber)
     user_id = callback.from_user.id
     await bot.delete_message(message_id=callback.message.message_id, chat_id=user_id)
     if callback.data.split("_")[0] == "subscribe":
@@ -53,24 +59,27 @@ async def mainMenu(callback: CallbackQuery, state: FSMContext, bot: Bot, subscri
         )
         await state.set_state(ClientStates.editLocation)
     if callback.data == "getWeather":
-        dateNow = datetime.datetime.now()
-        locationUser = subscriber.location
-        weather = getWeather(locationUser, -1)
-        if subscriber.paid_subscription:
-            weather += f"\n{getCertainWeather(locationUser, date=[dateNow.day + 1, dateNow.month])}"
+        date_now = datetime.datetime.now()
+        location_user = subscriber.location
+        weather = getWeather(location_user, -1)
+        if subscriber.paid_subscription_id:
+            weather += f"\n{getCertainWeather(location_user, date=[date_now.day + 1, date_now.month])}"
         await bot.send_message(
             chat_id=user_id,
             text=weather
         )
     if callback.data == "buySubscription":
-        prices = [LabeledPrice(**configPrice)]
-        for discount_name in subscriber.discounts:
-            discount = dbDiscounts.getDiscount(name=discount_name)
-            amount = discount.amount
-            label = discount.label
-            prices.append(LabeledPrice(amount=(-configPrice["amount"] / 100 * amount),
-                                       label=f"Скидка {amount} {label}%"))
-        await bot.send_invoice(chat_id=user_id, prices=prices, **configDetails)
+        await bot.send_message(chat_id=callback.from_user.id, text="Подписки:",
+                               reply_markup=genSubscriptionsKeyboard().as_markup())
+        # prices = [LabeledPrice(**configPrice)]
+        # if subscriber.discounts:
+        #     for discount_name in subscriber.discounts:
+        #         discount = dbDiscounts.getDiscount(name=discount_name)
+        #         amount = discount.amount
+        #         label = discount.label
+        #         prices.append(LabeledPrice(amount=(-configPrice["amount"] / 100 * amount),
+        #                                    label=f"Скидка {amount} {label}%"))
+        # await bot.send_invoice(chat_id=user_id, prices=prices, **configDetails)
     if callback.data == "resubscribe":
         await bot.send_message(
             chat_id=user_id,
@@ -98,41 +107,35 @@ async def subscribeStep2(msg: Message, state: FSMContext):
     await state.set_state(ClientStates.setTimer)
 
 
-async def subscribeStep3(msg: Message, state: FSMContext, bot: Bot, time: str, subscriber: UserDB | tuple | bool):
+async def subscribeStep3(msg: Message, state: FSMContext, bot: Bot,
+                         time: str, subscriber: UserDB | tuple | bool, discounts: dict | None):
     data = await state.get_data()
     location = data["location"]
-    oldUser = False
+    old_user = False
     if isinstance(subscriber, list):
-        oldUser = True
-    dbSubscribers.addUser(msg.from_user.id, location, msg.from_user.username, time, subscriber[1] if oldUser else None)
+        old_user = True
+    dbSubscribers.addUser(msg.from_user.id, location, msg.from_user.username, time, subscriber[1] if old_user else None)
     if not dbScheduler.timeExist(time):
         await scheduler.addTime(time, bot)
     await msg.reply(f"""Вы подписались на ежедневный прогноз погоды!
     Адрес: {location}
     Расписание: Каждый день в {time}
-    Платная подписка: {f'от {subscriber[1]}' if oldUser else 'Нет'}""")
-    if oldUser:
-        dbOldSubscribers.delUser(subscriber[0])
-        return await state.clear()
-    print(data)
-    print(data.get("invited_from"))
-    if data.get("invited_from"):
-        dbSubscribers.giveDiscount(msg.from_user.id, "invited")
-        discount_invited = dbDiscounts.getDiscount(name="invited")
-        await msg.reply(f"Вам была выдана скидка в размере {discount_invited.amount}% {discount_invited.label}")
-        invited_from_id = decode_payload(data["invited_from"])
-        invited_from_user = dbSubscribers.getUser(user_id=invited_from_id)
-        discount_inviting_1 = dbDiscounts.getDiscount(name="inviting_1")
-        if "inviting_1" not in invited_from_user.discounts:
-            dbSubscribers.giveDiscount(invited_from_id, "inviting_1")
-            await msg.reply(f"Вам была выдана скидка в размере {discount_inviting_1.amount}% {discount_inviting_1.label}")
+    Платная подписка: {f'от {subscriber[1]}' if old_user else 'Нет'}""")
+    if discounts:
+        if discounts == "abuse":
+            await msg.reply("За приглашение самого себя вы получаете скидку 0% ;)")
         else:
-            if len(dbSubscribers.getUsers(invited_from=invited_from_id)) == 5:
-                dbSubscribers.removeDiscount(invited_from_id, "inviting_1")
-                dbSubscribers.giveDiscount(invited_from_id, "inviting_5")
-                discount_inviting_5 = dbDiscounts.getDiscount("inviting_5")
-                await msg.reply(f"Вам была выдана скидка в размере {discount_inviting_5.amount}% "
-                                f"{discount_inviting_5.label}")
+            discount = discounts["invited"]
+            discount.give_discount(msg.from_user.id)
+            await msg.reply(f"Вы получаете скидку в размере {discount.amount}% {discount.label}")
+            invited_from_id = discounts["invited_from_id"]
+            discount = discounts["invited_from"]
+            discount.give_discount(invited_from_id)
+            await bot.send_message(invited_from_id, f"Вы получаете скидку в размере {discount.amount}% "
+                                                    f"{discount.label}")
+    if old_user:
+        dbOldSubscribers.deleteUser(user_id=subscriber[0])
+        return await state.clear()
     await msg.reply("Оформить платную подписку на детальный прогноз можно в /menu ;)")
     return await state.clear()
 
@@ -148,14 +151,14 @@ async def editLocation(msg: Message, state: FSMContext, subscriber: UserDB | tup
 
 
 async def editTime(msg: Message, state: FSMContext, bot: Bot, subscriber: UserDB | tuple | bool, time: str):
-    oldTime = dbSubscribers.getUser(user_id=msg.from_user.id).notify_time
+    old_time = dbSubscribers.getUser(user_id=msg.from_user.id).notify_time
     print(dbScheduler.timeExist(time))
     if not dbScheduler.timeExist(time):
         print("awdawd")
         await scheduler.addTime(time, bot)
         dbScheduler.addTime(time)
     subscriber.updateUser(notify_time=time)
-    dbScheduler.decreaseCount(oldTime)
+    dbScheduler.decreaseCount(old_time)
     await msg.reply("Время рассылки успешно изменено!")
     await state.clear()
 
@@ -168,15 +171,24 @@ async def process_pre_checkout_query(pre_checkout_query: types.PreCheckoutQuery,
 async def successful_payment(msg: types.Message):
     print("SUCCESSFUL PAYMENT:")
     payment_info = msg.successful_payment
+    subscription = dbSubscriptions.getSubscription(name=payment_info.invoice_payload)
     for k, v in payment_info:
         print(f"{k} = {v}")
-    dbSubscribers.updateUser(msg.from_user.id, paid_subscription=datetime.datetime.today().strftime('%Y-%m-%d'))
-    await msg.answer(f"Платеж на сумму {msg.successful_payment.total_amount // 100}"
-                     f"{msg.successful_payment.currency} прошел успешно!!!"
-                     f'\nПодписка "Детальный прогноз(1 месяц)" подключена!')
+    date_time = datetime.datetime.now()
+    dbReceipts.addReceipt(payment_info.invoice_payload, payment_info.currency, payment_info.total_amount,
+                          payment_info.telegram_payment_charge_id, payment_info.provider_payment_charge_id,
+                          msg.from_user.id, date_time, payment_info.shipping_option_id,
+                          payment_info.order_info)
+    dbSubscribers.updateUser(msg.from_user.id, paid_subscription_id=payment_info.telegram_payment_charge_id)
+    await msg.answer(f"Платеж на сумму {payment_info.total_amount // 100}"
+                     f"{payment_info.currency} прошел успешно!!!"
+                     f'\nПодписка "{subscription.label}" до {str(date_time + subscription.period).split(".")[0]}'
+                     f' подключена!')
 
 
-async def start(msg: types.Message, state: FSMContext):
+async def start(msg: types.Message, state: FSMContext, subscriber: UserDB | None | list):
+    if isinstance(subscriber, UserDB):
+        return msg.reply(f"Вы уже подписаны на прогноз погоды, управление профилем -> /menu")
     if " " in msg.text:
         invited_from = msg.text.split(" ")[-1]
         print(invited_from)
@@ -185,3 +197,32 @@ async def start(msg: types.Message, state: FSMContext):
         text="Укажите ваш населённый пункт(полное название или гео-метка)"
     )
     return await state.set_state(ClientStates.setLoc)
+
+
+async def subscriptions(bot: Bot, callback: CallbackQuery, subscriber: UserDB | None | list):
+
+    if callback.data.split("__")[0] == "pay":
+        subscription_name = callback.data.split("__")[1]
+        subscription = dbSubscriptions.getSubscription(name=subscription_name)
+        if "discount" in subscription.price:
+            prices = [LabeledPrice(amount=subscription.price["base"] * 100,
+                                   label="Базовая цена:"),
+                      LabeledPrice(amount=-subscription.price["base"] * subscription.price["discount"],
+                                   label=f"Скидка {subscription.price['discount']}%")]
+        else:
+            prices = [LabeledPrice(amount=subscription.price["total"] * 100,
+                                   label="Цена:")]
+        if subscriber.discounts:
+            for discount_name in subscriber.discounts:
+                discount = dbDiscounts.getDiscount(name=discount_name)
+                amount = discount.amount
+                label = discount.label
+                if "discount" in subscription.price:
+                    prices.append(LabeledPrice(amount=(-subscription.price["base"] * amount),
+                                               label=f"Скидка {amount}% {label}"))
+                else:
+                    prices.append(LabeledPrice(amount=(-subscription.price["total"] * amount),
+                                               label=f"Скидка {amount}% {label}"))
+        await bot.send_invoice(chat_id=callback.from_user.id, payload=subscription_name, prices=prices,
+                               title=subscription.label, description=subscription.description,
+                               photo_url=subscription.photo_url, **configDetails)

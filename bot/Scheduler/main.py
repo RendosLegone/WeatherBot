@@ -17,7 +17,6 @@ class Scheduler:
                 await asyncio.sleep(1)
 
     async def addTime(self, time, bot):
-        print(time)
         aioschedule.every(1).day.at(time).do(self.sendWeather, time=[time], bot=bot)
 
     @staticmethod

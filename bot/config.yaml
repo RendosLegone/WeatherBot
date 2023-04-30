@@ -1,18 +1,11 @@
 ONE_MONTH_SUBSCRIBE_DETAILS:
-  title: !!str Детальный прогноз(1 месяц)
-  description: !!str Подписка на детальный прогноз на 1 месяц
   currency: !!str rub
-  photo_url: !!str https://drivedrom.ru/wp-content/uploads/pogodka.png
   photo_width: !!int 416
   photo_height: !!int 234
   photo_size: !!int 416
   provider_token: !!str 381764678:TEST:32054
   is_flexible: !!bool false
   need_shipping_address: !!bool false
-  payload: !!str test
-ONE_MONTH_SUBSCRIBE_PRICE:
-  amount: !!int 12000
-  label: !!str Детальный прогноз на 1 месяц
 DISCOUNTS:
   global: !!int 10
   inviting: !!int 15

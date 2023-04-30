@@ -1,11 +1,11 @@
-import datetime
 from dataclasses import dataclass
-from datetime import date, time
+from datetime import date, time, datetime
 from psycopg2 import connect
 from psycopg2.extras import register_json
+from bot.misc.env import TgKeys
 
 register_json(oid=3802, array_oid=3807)
-connectdb = connect(database="telegram_db", host="localhost", user="rendos", password="120903")
+connectdb = connect(database=TgKeys.DB_NAME, host=TgKeys.DB_HOST, user=TgKeys.DB_USER, password=TgKeys.DB_PASSWORD)
 
 
 class Database:
@@ -20,38 +20,26 @@ class Database:
                             f"ORDER BY ordinal_position"
         self.cursor.execute(query_get_columns)
         list_args = []
-        str_args = ""
-        str_format = ""
         column_names = self.cursor.fetchall()
         for row in column_names:
             list_args.append(row[0])
-        for arg in list_args:
-            if str_args != "":
-                str_args += ", "
-                str_format += ", "
-            str_args += f'"{arg}"'
-            str_format += "%s"
+        str_args = ", ".join(list_args)
+        str_format = ", ".join(["%s" for _ in range(len(list_args))])
         return str_args, str_format, list_args
 
     def _get_records(self, count=None, **kwargs):
         if kwargs:
-            conditions = ""
-            for kwarg in kwargs:
-                conditions += f'"{kwarg}" = %s, '
-            conditions = conditions[:-2]
+            conditions = ", ".join([f'"{kwarg}" = %s' for kwarg in kwargs])
             list_values = [kwargs[kwarg] for kwarg in kwargs]
             self.cursor.execute(f"SELECT * FROM {self.table} WHERE {conditions}", list_values)
         else:
             self.cursor.execute(f"SELECT * FROM {self.table}")
-        record = self.cursor.fetchall()
+        if count:
+            record = self.cursor.fetchmany(count)
+        else:
+            record = self.cursor.fetchall()
         if record:
-            if count:
-                record = record[:count]
-                record = record[0]
-            return_record = []
-            for row in record:
-                return_record.append(row)
-            return return_record
+            return record
         return None
 
     def _create_record(self, **kwargs):
@@ -66,20 +54,14 @@ class Database:
 
     def _update_records(self, search_value, search_key, **kwargs):
         query_part_1 = f"UPDATE {self.table} SET "
-        query_part_2 = ""
-        for kwarg in kwargs:
-            query_part_2 += f'{kwarg} = %s, '
-        query_part_2 = query_part_2[:-2]
-        query_part_3 = f'WHERE "{search_key}" = %s'
+        query_part_2 = ", ".join([f'"{kwarg}" = %s' for kwarg in kwargs])
+        query_part_3 = f' WHERE "{search_key}" = %s'
         query = query_part_1 + query_part_2 + query_part_3
         self.cursor.execute(query, [kwargs[kwarg] for kwarg in kwargs] + [search_value])
         return self.connect.commit()
 
     def _delete_records(self, **kwargs):
-        conditions = ""
-        for kwarg in kwargs:
-            conditions += f'"{kwarg}" = %s, '
-        conditions = conditions[:-2]
+        conditions = ", ".join([f'"{kwarg} = %s"' for kwarg in kwargs])
         list_values = [kwargs[kwarg] for kwarg in kwargs]
         self.cursor.execute(f"DELETE FROM {self.table} WHERE {conditions}", list_values)
         return self.connect.commit()
@@ -95,7 +77,7 @@ class SubscribersDatabase(Database):
     def getUser(self, **kwargs):
         user = self._get_records(1, **kwargs)
         if user:
-            return UserDB(*user)
+            return UserDB(*user[0])
         return None
 
     def getUsers(self, **kwargs):
@@ -107,20 +89,21 @@ class SubscribersDatabase(Database):
             return users_return
         return None
 
-    def addUser(self, user_id, location, username, notify_time, paid_subscription=None, discounts=None,
+    def addUser(self, user_id, location, username, notify_time, paid_subscription_id=None, discounts=None,
                 invited_from=None):
         if not dbScheduler.getTime(time=notify_time):
             dbScheduler.addTime(notify_time)
         return self._create_record(user_id=user_id, location=location, username=username, notify_time=notify_time,
-                                   paid_subscription=paid_subscription, discounts=discounts, invited_from=invited_from)
+                                   paid_subscription_id=paid_subscription_id, discounts=discounts,
+                                   invited_from=invited_from)
 
     def updateUser(self, search_value, search_key="user_id", **kwargs):
         return self._update_records(search_value, search_key, **kwargs)
 
     def deleteUser(self, **kwargs):
         user = self.getUser(**kwargs)
-        if user.paid_subscription:
-            dbOldSubscribers.addUser(user.user_id, user.paid_subscription)
+        if user.paid_subscription_id:
+            dbOldSubscribers.addUser(user.user_id, user.paid_subscription_id)
         self._delete_records(**kwargs)
         return dbScheduler.decreaseCount(user.notify_time)
 
@@ -196,7 +179,7 @@ class DiscountsDatabase(Database):
     def getDiscount(self, **kwargs):
         discount = self._get_records(1, **kwargs)
         if discount:
-            return DiscountDB(*discount)
+            return DiscountDB(*discount[0])
         return None
 
     def getDiscounts(self, **kwargs):
@@ -222,10 +205,56 @@ class DiscountsDatabase(Database):
         return self.updateDiscounts(discount.name, limit_count=current_limit - 1)
 
 
+class PaidSubscriptionsDatabase(Database):
+    def __init__(self, table="paid_subscriptions"):
+        super().__init__(table)
+
+    def addSubscription(self, name, label, price, period, description=None, photo_url=None):
+        return self._create_record(name=name, label=label, price=price, period=period,
+                                   description=description, photo_url=photo_url)
+
+    def delSubscription(self, **kwargs):
+        return self._delete_records(**kwargs)
+
+    def updateSubscription(self, search_value, search_key="name", **kwargs):
+        return self._update_records(search_value, search_key, **kwargs)
+
+    def getSubscription(self, **kwargs):
+        record = self._get_records(1, **kwargs)
+        if record:
+            return PaidSubscriptionDB(*record[0])
+
+    def getSubscriptions(self, **kwargs):
+        subscriptions = self._get_records(**kwargs)
+        return_subscriptions = []
+        for subscription in subscriptions:
+            return_subscriptions.append(PaidSubscriptionDB(*subscription))
+        if return_subscriptions:
+            return return_subscriptions
+        return None
+
+    
+class PurchaseReceiptsDatabase(Database):
+    def __init__(self, table="purchase_receipts"):
+        super().__init__(table)
+
+    def addReceipt(self, subscription_name, currency, total_amount, telegram_purchase_id,
+                   provider_purchase_id, user_id, date_time, shipping_option_id=None, order_info=None):
+        return self._create_record(subscription_name=subscription_name, currency=currency, total_amount=total_amount,
+                                   telegram_purchase_id=telegram_purchase_id, provider_purchase_id=provider_purchase_id,
+                                   user_id=user_id, date_time=date_time, shipping_option_id=shipping_option_id,
+                                   order_info=order_info)
+
+    def getReceipt(self, **kwargs):
+        return ReceiptDB(*self._get_records(1, **kwargs))
+
+
 dbSubscribers = SubscribersDatabase()
 dbScheduler = SchedulerDatabase()
 dbOldSubscribers = OldSubscribersDatabase()
 dbDiscounts = DiscountsDatabase()
+dbSubscriptions = PaidSubscriptionsDatabase()
+dbReceipts = PurchaseReceiptsDatabase()
 
 
 @dataclass
@@ -234,7 +263,7 @@ class UserDB:
     location: str
     username: int
     notify_time: time
-    paid_subscription: date | None
+    paid_subscription_id: str | None
     discounts: list[str] | None
     invited_from: str | None
 
@@ -277,3 +306,26 @@ class TimeDB:
 
     def increase_count(self):
         dbScheduler.increaseCount(self.time)
+
+
+@dataclass
+class PaidSubscriptionDB:
+    name: str
+    label: str
+    price: dict
+    period: date
+    description: str | None
+    photo_url: str | None
+
+
+@dataclass
+class ReceiptDB:
+    subscription_name: str
+    currency: str
+    total_amount: int
+    telegram_purchase_id: str
+    provider_purchase_id: str
+    user_id: int
+    date_time: datetime
+    shipping_option_id: str
+    order_info: dict

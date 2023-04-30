@@ -11,4 +11,3 @@ asyncio~=3.4.3
 fake_useragent
 PyYAML~=6.0
 python-dotenv~=1.0.0
-nest-asyncio

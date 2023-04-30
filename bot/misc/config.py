@@ -9,9 +9,6 @@ configDiscounts = {}
 for key in config["ONE_MONTH_SUBSCRIBE_DETAILS"]:
     value = config["ONE_MONTH_SUBSCRIBE_DETAILS"][key]
     configDetails[key] = value
-for key in config["ONE_MONTH_SUBSCRIBE_PRICE"]:
-    value = config["ONE_MONTH_SUBSCRIBE_PRICE"][key]
-    configPrice[key] = value
 for key in config["DISCOUNTS"]:
     value = config["DISCOUNTS"][key]
     configDiscounts[key] = value

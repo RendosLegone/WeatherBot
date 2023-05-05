@@ -15,7 +15,7 @@ CREATE TABLE discounts (
     label VARCHAR,
     amount INTEGER NOT NULL,
     limit_count INTEGER,
-    summed_up boolean DEFAULT(TRUE),
+    summed_up boolean DEFAULT(true),
     trigger jsonb
 );
 

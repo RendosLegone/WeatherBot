@@ -5,7 +5,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.utils.deep_linking import create_start_link
 from bot.misc.config import configDetails
 from bot.states import ClientStates
-from bot.misc.util import getLoc
+from bot.misc.util import getLoc, genPrices
 from bot.misc.weather import getCertainWeather, getWeather
 from bot.database import dbScheduler, dbSubscribers, UserDB, dbDiscounts, dbOldSubscribers, dbSubscriptions, dbReceipts
 from bot.Scheduler import scheduler
@@ -18,7 +18,8 @@ async def menuHandler(msg: Message, subscriber: UserDB | list | bool):
         paid_subscription = 0
     elif isinstance(subscriber, list):
         new_user = "old"
-        paid_subscription = subscriber[1]
+        paid_subscription = dbSubscriptions.getSubscription(name=dbReceipts.getReceipt(user_id=subscriber[0])
+                                                            .subscription_name).label
     else:
         new_user = False
         paid_subscription = subscriber.paid_subscription_id
@@ -94,8 +95,9 @@ async def usePromo(msg: Message, subscriber: UserDB | list | bool):
                         if discount.limit_count == 0:
                             discount.deleteDiscount()
                             return await msg.reply(f'Промокод "{discount.label}" недействителен!')
-                    if discount.name in subscriber.discounts:
-                        return await msg.reply("Вы уже использовали этот промокод!")
+                    if subscriber.discounts:
+                        if discount.name in subscriber.discounts:
+                            return await msg.reply("Вы уже использовали этот промокод!")
                     dbSubscribers.giveDiscount(subscriber.user_id, discount.name)
                     discount.decreaseLimit()
                     return await msg.reply(f'Вам выдана скидка "{discount.label}" в размере {discount.amount}%')
@@ -121,15 +123,19 @@ async def subscribeStep3(msg: Message, state: FSMContext, bot: Bot,
     data = await state.get_data()
     location = data["location"]
     old_user = False
+    paid_subscription = None
     if isinstance(subscriber, list):
         old_user = True
-    dbSubscribers.addUser(msg.from_user.id, location, msg.from_user.username, time, subscriber[1] if old_user else None)
+        paid_subscription = dbSubscriptions.getSubscription(name=dbReceipts.getReceipt(user_id=subscriber[0])
+                                                            .subscription_name).label
+    dbSubscribers.addUser(msg.from_user.id, location, msg.from_user.username, time,
+                          dbReceipts.getReceipt(user_id=subscriber[0]).telegram_purchase_id if old_user else None)
     if not dbScheduler.timeExist(time):
         await scheduler.addTime(time, bot)
     await msg.reply(f"""Вы подписались на ежедневный прогноз погоды!
     Адрес: {location}
     Расписание: Каждый день в {time}
-    Платная подписка: {f'от {subscriber[1]}' if old_user else 'Нет'}""")
+    Платная подписка: {f'{paid_subscription}' if paid_subscription else 'Нет'}""")
     if discounts:
         if discounts == "abuse":
             await msg.reply("За приглашение самого себя вы получаете скидку 0% ;)")
@@ -180,9 +186,9 @@ async def process_pre_checkout_query(pre_checkout_query: types.PreCheckoutQuery,
 async def successful_payment(msg: types.Message):
     print("SUCCESSFUL PAYMENT:")
     payment_info = msg.successful_payment
-    subscription = dbSubscriptions.getSubscription(name=payment_info.invoice_payload)
     for k, v in payment_info:
         print(f"{k} = {v}")
+    subscription = dbSubscriptions.getSubscription(name=payment_info.invoice_payload)
     date_time = datetime.datetime.now()
     dbReceipts.addReceipt(payment_info.invoice_payload, payment_info.currency, payment_info.total_amount,
                           payment_info.telegram_payment_charge_id, payment_info.provider_payment_charge_id,
@@ -209,29 +215,11 @@ async def start(msg: types.Message, state: FSMContext, subscriber: UserDB | None
 
 
 async def subscriptions(bot: Bot, callback: CallbackQuery, subscriber: UserDB | None | list):
-
     if callback.data.split("__")[0] == "pay":
+        await bot.delete_message(callback.from_user.id, callback.message.message_id)
         subscription_name = callback.data.split("__")[1]
         subscription = dbSubscriptions.getSubscription(name=subscription_name)
-        if "discount" in subscription.price:
-            prices = [LabeledPrice(amount=subscription.price["base"] * 100,
-                                   label="Базовая цена:"),
-                      LabeledPrice(amount=-subscription.price["base"] * subscription.price["discount"],
-                                   label=f"Скидка {subscription.price['discount']}%")]
-        else:
-            prices = [LabeledPrice(amount=subscription.price["total"] * 100,
-                                   label="Цена:")]
-        if subscriber.discounts:
-            for discount_name in subscriber.discounts:
-                discount = dbDiscounts.getDiscount(name=discount_name)
-                amount = discount.amount
-                label = discount.label
-                if "discount" in subscription.price:
-                    prices.append(LabeledPrice(amount=(-subscription.price["base"] * amount),
-                                               label=f"Скидка {amount}% {label}"))
-                else:
-                    prices.append(LabeledPrice(amount=(-subscription.price["total"] * amount),
-                                               label=f"Скидка {amount}% {label}"))
-        await bot.send_invoice(chat_id=callback.from_user.id, payload=subscription_name, prices=prices,
-                               title=subscription.label, description=subscription.description,
-                               photo_url=subscription.photo_url, **configDetails)
+        prices = genPrices(subscriber, subscription)
+        return await bot.send_invoice(chat_id=callback.from_user.id, payload=subscription_name, prices=prices,
+                                      title=subscription.label, description=subscription.description,
+                                      photo_url=subscription.photo_url, **configDetails)

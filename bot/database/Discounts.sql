@@ -33,4 +33,4 @@ INSERT INTO discounts (name, label, amount, limit_count, trigger) VALUES (
     7,
     1000,
     '{"promo": "SUMMER_2023"}'
-)
+);

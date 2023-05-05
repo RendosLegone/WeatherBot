@@ -1,41 +1,41 @@
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.types import InlineKeyboardButton
-
+# 💵💳🔅❌✔⏰ 🧾🔑🔤💲⛱☁🏙🌏🌐
 subscribeButton = InlineKeyboardButton(
-    text="Подписаться на прогноз погоды",
+    text="Подписаться на прогноз погоды ✔",
     callback_data="subscribe"
 )
 unsubscribeButton = InlineKeyboardButton(
-    text="Отписаться от прогноза погоды",
+    text="Отписаться от прогноза погоды ❌",
     callback_data="unsubscribe"
 )
 editNotifyTime = InlineKeyboardButton(
-    text="Изменить время",
+    text="Изменить время ⏰",
     callback_data="editTime"
 )
 getWeather = InlineKeyboardButton(
-    text="Прогноз на завтра",
+    text="Прогноз на завтра ☁",
     callback_data="getWeather"
 )
 editLocation = InlineKeyboardButton(
-    text="Изменить адрес",
+    text="Изменить адрес 🌐",
     callback_data="editLocation",
     request_location=True
 )
 buySubscription = InlineKeyboardButton(
-    text="Оформить подписку",
+    text="Оформить подписку 💳",
     callback_data="buySubscription"
 )
 resubscribe = InlineKeyboardButton(
-    text="Вернуть подписку\n({0})",
+    text="Вернуть подписку 🧾 \n\n({0})",
     callback_data="resubscribe"
 )
 getDiscount = InlineKeyboardButton(
-    text="Получить скидку",
+    text="Получить скидку 💲",
     callback_data="getDiscount"
 )
 usePromo = InlineKeyboardButton(
-    text="Использовать промокод",
+    text="Использовать промокод 🔤",
     callback_data="usePromo"
 )
 
@@ -49,7 +49,12 @@ def genMainKeyboard(new_user, paid_subscription):
     listButtons = [unsubscribeButton, editLocation, editNotifyTime, getWeather, getDiscount, usePromo]
     if not paid_subscription:
         listButtons.append(buySubscription)
-    return InlineKeyboardBuilder().row(*listButtons, width=1)
+    keyboard = InlineKeyboardBuilder()
+    keyboard.row(listButtons[0], width=1)
+    keyboard.row(listButtons[1], listButtons[2], width=2)
+    keyboard.row(listButtons[3], width=1)
+    keyboard.row(listButtons[4], listButtons[5], width=2)
+    return keyboard
 
 
 def genDiscountButton(user_id):

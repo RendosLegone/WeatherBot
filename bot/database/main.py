@@ -103,7 +103,7 @@ class SubscribersDatabase(Database):
     def deleteUser(self, **kwargs):
         user = self.getUser(**kwargs)
         if user.paid_subscription_id:
-            dbOldSubscribers.addUser(user.user_id, user.paid_subscription_id)
+            dbOldSubscribers.addUser(user.user_id)
         self._delete_records(**kwargs)
         return dbScheduler.decreaseCount(user.notify_time)
 
@@ -162,8 +162,8 @@ class OldSubscribersDatabase(SubscribersDatabase):
     def __init__(self):
         super().__init__("old_subscribers")
 
-    def addUser(self, user_id, paid_subscription):
-        return self._create_record(user_id=user_id, paid_subscription=paid_subscription)
+    def addUser(self, user_id):
+        return self._create_record(user_id=user_id)
 
     def getUser(self, **kwargs):
         return self._get_records(1, **kwargs)
@@ -227,10 +227,11 @@ class PaidSubscriptionsDatabase(Database):
     def getSubscriptions(self, **kwargs):
         subscriptions = self._get_records(**kwargs)
         return_subscriptions = []
-        for subscription in subscriptions:
-            return_subscriptions.append(PaidSubscriptionDB(*subscription))
-        if return_subscriptions:
-            return return_subscriptions
+        if subscriptions:
+            for subscription in subscriptions:
+                return_subscriptions.append(PaidSubscriptionDB(*subscription))
+            if return_subscriptions:
+                return return_subscriptions
         return None
 
     

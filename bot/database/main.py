@@ -103,7 +103,7 @@ class SubscribersDatabase(Database):
     def deleteUser(self, **kwargs):
         user = self.getUser(**kwargs)
         if user.paid_subscription_id:
-            dbOldSubscribers.addUser(user.user_id)
+            dbOldSubscribers.addOldUser(user.user_id)
         self._delete_records(**kwargs)
         return dbScheduler.decreaseCount(user.notify_time)
 
@@ -122,8 +122,8 @@ class SubscribersDatabase(Database):
 
 
 class SchedulerDatabase(Database):
-    def __init__(self):
-        super().__init__("scheduler")
+    def __init__(self, table="scheduler"):
+        super().__init__(table)
 
     def getTime(self, **kwargs):
         if not kwargs:
@@ -159,10 +159,10 @@ class SchedulerDatabase(Database):
 
 
 class OldSubscribersDatabase(SubscribersDatabase):
-    def __init__(self):
-        super().__init__("old_subscribers")
+    def __init__(self, table="old_subscribers"):
+        super().__init__(table)
 
-    def addUser(self, user_id):
+    def addOldUser(self, user_id):
         return self._create_record(user_id=user_id)
 
     def getUser(self, **kwargs):
@@ -173,8 +173,8 @@ class OldSubscribersDatabase(SubscribersDatabase):
 
 
 class DiscountsDatabase(Database):
-    def __init__(self):
-        super().__init__("discounts")
+    def __init__(self, table="discounts"):
+        super().__init__(table)
 
     def getDiscount(self, **kwargs):
         discount = self._get_records(1, **kwargs)
@@ -209,7 +209,7 @@ class PaidSubscriptionsDatabase(Database):
     def __init__(self, table="paid_subscriptions"):
         super().__init__(table)
 
-    def addSubscription(self, name, label, price, period, description=None, photo_url=None):
+    def addSubscription(self, name, label, price, period, description, photo_url=None):
         return self._create_record(name=name, label=label, price=price, period=period,
                                    description=description, photo_url=photo_url)
 
@@ -234,7 +234,7 @@ class PaidSubscriptionsDatabase(Database):
                 return return_subscriptions
         return None
 
-    
+
 class PurchaseReceiptsDatabase(Database):
     def __init__(self, table="purchase_receipts"):
         super().__init__(table)
@@ -273,6 +273,12 @@ class UserDB:
 
     def updateUser(self, **kwargs):
         return dbSubscribers.updateUser(self.user_id, **kwargs)
+
+    def giveDiscount(self, discount_name):
+        return dbSubscribers.giveDiscount(self.user_id, discount_name)
+
+    def removeDiscount(self, discount_name):
+        return dbSubscribers.removeDiscount(self.user_id, discount_name)
 
 
 @dataclass

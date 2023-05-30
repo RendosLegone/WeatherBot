@@ -35,6 +35,8 @@ class Scheduler:
                 if date_time < sub_date:
                     return await bot.send_message(chat_id=user.user_id, text=f"""Детальный прогноз(подписка):
                     {getCertainWeather(user.location, [day_now, month_now])}""")
+                await bot.send_message(chat_id=user.user_id, text=f"Ваша {subscription.label} истекла, "
+                                                                  f"продлить подписку можно в /menu ;)")
                 return dbSubscribers.updateUser(user.user_id, paid_subscription_id=None)
 
 

@@ -11,5 +11,5 @@ class SubscriberFilter(Filter):
         if not dbSubscribers.getUser(user_id=msg.from_user.id):
             if not dbOldSubscribers.getUser(user_id=msg.from_user.id):
                 return {"subscriber": None}
-            return {"subscriber": dbOldSubscribers.getUser(user_id=msg.from_user.id)}
+            return {"subscriber": dbOldSubscribers.getUser(user_id=msg.from_user.id)[0]}
         return {"subscriber": dbSubscribers.getUser(user_id=msg.from_user.id)}

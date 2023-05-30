@@ -11,3 +11,4 @@ class TgKeys:
     DB_NAME: Final = environ.get("DB_NAME")
     DB_USER: Final = environ.get("DB_USER")
     DB_PASSWORD: Final = environ.get("DB_PASSWORD")
+    PROJECT_PATH: Final = environ.get("PROJECT_PATH")

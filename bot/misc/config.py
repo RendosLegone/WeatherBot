@@ -1,7 +1,8 @@
 import yaml
 from yaml import load
+from .env import TgKeys
 
-with open("/home/maxim/PycharmProjects/WeatherBot/bot/config.yaml", encoding="UTF-8") as f:
+with open(f"{TgKeys.PROJECT_PATH}/bot/config.yaml", encoding="UTF-8") as f:
     config = load(f, yaml.FullLoader)
 configDetails = {}
 configPrice = {}

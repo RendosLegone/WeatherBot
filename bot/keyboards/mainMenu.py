@@ -38,6 +38,17 @@ usePromo = InlineKeyboardButton(
     text="Использовать промокод 🔤",
     callback_data="usePromo"
 )
+profile = InlineKeyboardButton(
+    text="Профиль 🔑",
+    callback_data="profile"
+)
+go_back = InlineKeyboardButton(
+    text="Назад 🔙",
+    callback_data="back"
+)
+
+mainButtons = [resubscribe, subscribeButton, getWeather, getDiscount, buySubscription, profile, usePromo]
+profileButtons = [editLocation, editNotifyTime, go_back]
 
 
 def genMainKeyboard(new_user, paid_subscription):
@@ -46,14 +57,19 @@ def genMainKeyboard(new_user, paid_subscription):
         return InlineKeyboardBuilder().add(resubscribe)
     if new_user is True:
         return InlineKeyboardBuilder().add(subscribeButton)
-    listButtons = [unsubscribeButton, editLocation, editNotifyTime, getWeather, getDiscount, usePromo]
-    if not paid_subscription:
-        listButtons.append(buySubscription)
     keyboard = InlineKeyboardBuilder()
-    keyboard.row(listButtons[0], width=1)
-    keyboard.row(listButtons[1], listButtons[2], width=2)
-    keyboard.row(listButtons[3], width=1)
-    keyboard.row(listButtons[4], listButtons[5], width=2)
+    keyboard.row(getWeather, profile, width=2)
+    keyboard.row(unsubscribeButton, width=1)
+    keyboard.row(getDiscount, usePromo, width=2)
+    if not paid_subscription:
+        keyboard.row(buySubscription, width=1)
+    return keyboard
+
+
+def genProfileKeyboard():
+    keyboard = InlineKeyboardBuilder()
+    keyboard.row(editLocation, editNotifyTime, width=2)
+    keyboard.row(go_back, width=1)
     return keyboard
 
 
